@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Empty project</title>
+
+    <style>
+        #game_div {
+
+        }
+        #main_div {
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            background: black;
+            display: block;
+        }
+        #main_form_wrapper{
+            margin-top: 100px;
+        }
+        #start_game{
+            display: block;
+        margin: 0 auto;
+        width: 100px;}
+    </style>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="phaser.min.js"></script>
+    <script type="text/javascript" src="main.js"></script>
+    <!--  <script type="text/javascript" src="menu.js"></script>-->
+    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+    <script type="text/javascript" src="client.js"></script>
+</head>
+
+<body>
+<div id="main_div">
+    <div class="row">
+        <div id="main_form_wrapper"  class="col-lg-offset-4 col-lg-3">
+            <div class="form-group">
+                <input class="form-control" type="text" id="player_name"  placeholder="Choose name">
+            </div>
+            <div class="col-lg-12">
+            <button type="button" id="start_game" class="btn btn-sm btn-info">Start</button>
+             </div>
+        </div>
+    </div>
+</div>
+<div id="game_div"> </div>
+
+</body>
+<script>
+    var player_name='';
+    $(function() {
+
+        $("#start_game").click(function(){
+            $("#main_div").hide();
+            var name=$("#player_name").val();
+            player_name=name;
+            startGame();
+        });
+
+    });
+
+</script>
+
+</html>
