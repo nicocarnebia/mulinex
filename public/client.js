@@ -33,7 +33,8 @@ function onSocketConnected () {
     console.log('Connected to socket server with ID '+ socket.id);
     player.id= "/#"+socket.id;
     // Send local player data to the game server
-    socket.emit('new player', { x: player.x, y: player.y });
+    console.log(player.getName());
+    socket.emit('new player', { x: player.sprite.x, y: player.sprite.y ,name:player.getName()});
 }
 // Socket disconnected
 function onSocketDisconnect () {
@@ -41,7 +42,7 @@ function onSocketDisconnect () {
 }
 // New player
 function onNewPlayer (data) {
-    console.log('New player connected:', data.id);
+    console.log('New player connected:', data);
     // Avoid possible duplicate players
     var duplicate = playerById(data.id);
     if (duplicate) {
@@ -60,13 +61,14 @@ function onMovePlayer (data) {
         return
     }
     // Update player position
-    movePlayer.x = data.x;
-    movePlayer.y = data.y;
-    movePlayer.rotation = data.rotation;
+    movePlayer.sprite.x = data.x;
+    movePlayer.sprite.y = data.y;
+    movePlayer.sprite.rotation = data.rotation;
 }
 // Remove player
 function onRemovePlayer (data) {
     if(data.id==player.id){
+        socket.disconnect();
         gameOver();
     }
     var removePlayer = playerById(data.id);
@@ -75,9 +77,9 @@ function onRemovePlayer (data) {
         console.log('Player not found: ', data.id)
         return
     }
-    // Remove player from array
-    //remotePlayers.splice(remotePlayers.indexOf(removePlayer), 1)
+    // Remove player from group and destroy
     remotePlayers.remove(removePlayer);
+    removePlayer.destroy(true);
 }
 // Find player by ID
 function playerById (id) {

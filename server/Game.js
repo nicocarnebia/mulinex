@@ -15,31 +15,34 @@ var Game = function () {
         // Create a new player
         var newPlayer = new Player(data.x, data.y);
         newPlayer.id = client.id;
+
+        newPlayer.setName(data.name);
+
         // Broadcast new player to connected socket clients
         //io.sockets.emit('new player', {id: newPlayer.id, x: newPlayer.getX(), y: newPlayer.getY()});
-        client.broadcast.emit('new player', {id: newPlayer.id, x: newPlayer.getX(), y: newPlayer.getY()});
+        client.broadcast.emit('new player', {id: newPlayer.id, x: newPlayer.getX(), y: newPlayer.getY(),name:newPlayer.getName()});
         // Send existing players to the new player
         var i, existingPlayer;
         for (i = 0; i < players.getTotalPlayers(); i++) {
             existingPlayer = players.getPlayer(i);
-            client.emit('new player', {id: existingPlayer.id, x: existingPlayer.getX(), y: existingPlayer.getY()});
+            client.emit('new player', {id: existingPlayer.id, x: existingPlayer.getX(), y: existingPlayer.getY(),name:existingPlayer.getName()});
         }
         players.addPlayer(newPlayer);
     };
     var handlePlayerDiscconnect = function (client,io) {
         console.log('Player has disconnected: ' + client.id);
         var toBeRemovedPlayer = players.getPlayerById(client.id);
+        io.sockets.emit('remove player', {id: client.id});
         // Player not found
         if (!toBeRemovedPlayer) {
             console.log('Player not found on disconnect: ' + client.id);
-            console.log(players);
-            return;
+             return;
         }
         players.removePlayer(toBeRemovedPlayer);
         // Broadcast removed player to ALL EXCEPT socket connected socket clients
         //this.broadcast.emit('remove player', {id: this.id});
         // Broadcast removed player to ALL connected socket clients
-        io.sockets.emit('remove player', {id: client.id});
+
     };
     var handlePlayerMove = function (client,data) {
         // Find player in array
@@ -60,6 +63,7 @@ var Game = function () {
         client.broadcast.emit('move player', {id: movePlayer.id, x: movePlayer.getX(), y: movePlayer.getY(), rotation:movePlayer.getRotation()})
     };
     var handlePlayersColission = function(client,io,data){
+
         client.broadcast.emit('collision', {"x":data.x,"y":data.y});
         //compare speed
         var playerA = players.getPlayerById(data.player_a_id);

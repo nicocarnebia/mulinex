@@ -20,6 +20,7 @@ var obstructors;
 var map;
 var layer;
 var crashEmitter;
+var gui;
 var main_state = {
     preload: function () {
         //game.load.image('background', 'assets/debug-grid-1920x1920.png');
@@ -28,6 +29,7 @@ var main_state = {
         game.load.image('background_tiles', 'assets/tilemaps/background.png');
     },
     create: function () {
+
         socket = io.connect(SOCKETIO_SERVER_IP);
         game.stage.backgroundColor = '#787878';
         map = game.add.tilemap('background_json');
@@ -55,38 +57,45 @@ var main_state = {
         game.scale.startFullScreen(false);
         gui = new GUI(game);
 
-        game.camera.follow(player);
+        game.camera.follow(player.sprite);
         game.physics.enable([player, obstructors], Phaser.Physics.ARCADE);
-        player.body.maxVelocity.x = 500;
-        player.body.maxVelocity.y = 500;
-        player.body.acceleration.x = 0;
-        player.body.acceleration.y = 0;
-        player.body.collideWorldBounds = true;
+        player.sprite.body.maxVelocity.x = 500;
+        player.sprite.body.maxVelocity.y = 500;
+        player.sprite.body.acceleration.x = 0;
+        player.sprite.body.acceleration.y = 0;
+        player.sprite.body.collideWorldBounds = true;
         setEventHandlers();
     }
 };
 main_state.render = function () {
     //game.debug.bodyInfo(player, 16, 24);
     game.debug.body(player);
+    player.forEachAlive(function(member) {    game.debug.body(member);}, this);
+    remotePlayers.forEachAlive(function(member) {
+        member.forEachAlive(function(member) {    game.debug.body(member);}, this);
+    }, this);
 };
 main_state.update = function () {
-    gui.updateSpeedValue(player._showable_speed);
-    game.physics.arcade.collide(player, obstructors, this.carColissionHandler, null, this);
-    game.physics.arcade.collide(player, remotePlayers, this.carColissionHandler, null, this);
+    //gui.updateSpeedValue(player._showable_speed);
+    //game.physics.arcade.collide(player.sprite, obstructors, this.carColissionHandler, null, this);
+    remotePlayers.forEachAlive(function(member) {
+        game.physics.arcade.collide(player.sprite, member.sprite, main_state.carColissionHandler, null, main_state);
+    });
+
 };
 main_state.carColissionHandler = function (car, other) {
-    emitColission(car.x,car.y,car.id,other.id);
+    emitColission(car.x,car.y,car.parent.id,other.parent.id);
     crashEmitter.showAtPosition(car.x,car.y);//is this necessary?
     //explode car
-
     //GUI.gameover();
 };
 main_state.addRemotePlayer=function(game,data){
     var  remote = new PhaserCar(game, false);
-    remote.x=data.x;
-    remote.y=data.y;
+    remote.sprite.x=data.x;
+    remote.sprite.y=data.y;
     remote.id=data.id;
-    console.log(remote.id);
+    remote.setName(data.name);
+    console.log("addedRemote");
     remotePlayers.add(remote);
 };
 //EXTENDED GROUP
@@ -163,13 +172,7 @@ GUI = function (game) {
         this._score_text.setText("" + val + "");
     };
 
-    //PLAYER NAME
-    this._player_name_text = game.add.text(0, 0, player_name, {font: "12px Arial", fill: "#fff"}, this);
-    this._player_name_text.anchor.setTo(0.5, 0.5);
-    this._player_name_text.fixedToCamera = false;
-    this.setPlayerName = function (val) {
-        this._player_name_text.setText("" + val + "");
-    };
+
     this._player_names=[];//players name...
      this.addPlayerName=function(playerId,x,y,name){
      var txt = game.add.text(x, y, ""+name+"", {font: "8px Arial", fill: "#fff"}, this);
@@ -182,51 +185,75 @@ GUI.prototype = Object.create(Phaser.Group.prototype);
 GUI.prototype.constructor = GUI;
 GUI.prototype.update = function () {
     //TODO
-    //player name follow player
-    this._player_name_text.x=player.x;
-    this._player_name_text.y=player.y-25;
+
 
 };
 //EXTENDED SPRITE
 PhaserCar = function (game,isPlayer) {
     //  We call the Phaser.Sprite passing in the game reference
     //Phaser.Sprite.call(this, game, game.world.randomX, game.world.randomY, 'car');
-    Phaser.Sprite.call(this, game, 40, 40, 'car');
-    this.anchor.setTo(0.5, 0.5);
-    game.physics.enable(this, Phaser.Physics.ARCADE);
-    this.body.offset.setTo(5, 20);
-    this.body.height = 20;
-    this.body.width = 20;
+    Phaser.Group.call(this, game);
+    this.enableBody=true;
+    this.enableBodyDebug=true;
+    this.sprite=game.add.sprite(40, 40, 'car');
+    this.add(this.sprite);
+    //game.physics.enable(this, Phaser.Physics.ARCADE);
+    // game.physics.enable(this.sprite, Phaser.Physics.ARCADE);
+    this.sprite.anchor.setTo(0.5, 0.5);
+    this.name=player_name;
+
+    this.sprite.body.offset.setTo(5, 20);
+    this.sprite.body.height = 20;
+    this.sprite.body.width = 20;
+    this.sprite.body.offset.setTo(5, 20);
+    this.sprite.body.height = 20;
+    this.sprite.body.width = 20;
     this._is_player=isPlayer;
-    if(isPlayer)game.add.existing(this);//if is player it gets added as its created
+
+    //if(isPlayer)game.add.existing(this);//if is player it gets added as its created
     this._max_speed = 500;
     this._speed_per_loop = 1;
     this._speed = 0;
     this._showable_speed = 0;
     this.id=0;
-    this.body.immovable = true;
+    this.sprite.body.immovable = true;
+    //PLAYER NAME
+    this._player_name_text = game.add.text(0, 0, this.name, {font: "12px Arial", fill: "#fff"}, this);
+    this._player_name_text.anchor.setTo(0.5, 0.5);
+    this._player_name_text.fixedToCamera = false;
+    this.setName = function (val) {
+        this.name=val;
+        this._player_name_text.setText("" + val + "");
+    };
+    this.getName = function(){
+      return this.name;
+    };
     this.getSpeed = function(){
     return this._speed;
     };
 };
 
-PhaserCar.prototype = Object.create(Phaser.Sprite.prototype);
+PhaserCar.prototype = Object.create(Phaser.Group.prototype);
 PhaserCar.prototype.constructor = PhaserCar;
 PhaserCar.prototype.update = function () {
     var _desacceletarion = 5;//NAME?
     var IMG_OFFSET_ANLGE_FIX = 1.6;
+
+    //player name follow player
+    this._player_name_text.x=this.sprite.x;
+    this._player_name_text.y=this.sprite.y-35;
     //  only move when clicking
     if(!this._is_player)return;
 
     if (game.input.mousePointer.isDown) {
-        if (!Phaser.Rectangle.contains(this.body, game.input.worldX, game.input.worldY)) {
+        if (!Phaser.Rectangle.contains(this.sprite.body, game.input.worldX, game.input.worldY)) {
             if (this._speed <= this._max_speed) {
                 this._speed += this._speed_per_loop;
             } else {
                 this._speed = this._max_speed;
             }
-            game.physics.arcade.moveToPointer(this, this._speed);
-            this.rotation = game.physics.arcade.angleToPointer(this) + IMG_OFFSET_ANLGE_FIX;
+            game.physics.arcade.moveToPointer(this.sprite, this._speed);
+            this.sprite.rotation = game.physics.arcade.angleToPointer(this.sprite) + IMG_OFFSET_ANLGE_FIX;
             //  if it's overlapping the mouse, don't move any more
         }
     } else {
@@ -236,18 +263,18 @@ PhaserCar.prototype.update = function () {
         } else {
             this._speed = 0;
         }
-        if (this.body.velocity.x > 0) {
-            this.body.velocity.x -= this._speed_per_loop * _desacceletarion;
+        if (this.sprite.body.velocity.x > 0) {
+            this.sprite.body.velocity.x -= this._speed_per_loop * _desacceletarion;
         } else {
-            this.body.velocity.x += this._speed_per_loop * _desacceletarion;
+            this.sprite.body.velocity.x += this._speed_per_loop * _desacceletarion;
         }
-        if (this.body.velocity.y > 0) {
-            this.body.velocity.y -= this._speed_per_loop * _desacceletarion;
+        if (this.sprite.body.velocity.y > 0) {
+            this.sprite.body.velocity.y -= this._speed_per_loop * _desacceletarion;
         } else {
-            this.body.velocity.y += this._speed_per_loop * _desacceletarion;
+            this.sprite.body.velocity.y += this._speed_per_loop * _desacceletarion;
         }
     }
-    socket.emit('move player', { x: player.x, y: player.y ,rotation:player.rotation,speed:player.getSpeed()});
+    socket.emit('move player', { x: player.sprite.x, y: player.sprite.y ,rotation:player.sprite.rotation,speed:player.getSpeed()});
     this._showable_speed = this._speed / 2;
 };
 // And finally we tell Phaser to add and start our 'main' state

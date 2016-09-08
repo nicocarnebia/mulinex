@@ -6,7 +6,7 @@ var Player = function (start_x, start_y) {
     var x = start_x;
     var y = start_y;
     var id;
-    //name...
+    var name='';
     var rotation;
     var speed=0;
     var score=0
@@ -15,6 +15,9 @@ var Player = function (start_x, start_y) {
     // Getters and setters
     var getX = function () {
         return x;
+    };
+    var getName = function () {
+        return name;
     };
     var getRotation = function(){
         return rotation;
@@ -30,6 +33,9 @@ var Player = function (start_x, start_y) {
     };
     var setX = function (newX) {
         x = newX;
+    };
+    var setName = function (v) {
+        name= v;
     };
     var setRotation = function (newRotation) {
         rotation = newRotation;
@@ -59,6 +65,8 @@ var Player = function (start_x, start_y) {
         setSpeed:setSpeed,
         getScore:getScore,
         setScore:setScore,
+        getName:getName,
+        setName:setName,
         id: id
     }
 };
