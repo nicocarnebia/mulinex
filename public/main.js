@@ -10,8 +10,8 @@ etc.
 */
 // We start by initializing Phaser
 // Parameters: width of the game, height of the game, how to render the game, the HTML div that will contain the game
-var WIDTH = 736;//config
-var HEIGHT = 414//config
+var WIDTH = 1024;//config
+var HEIGHT = 768//config
 var game = new Phaser.Game(WIDTH, HEIGHT, Phaser.AUTO, 'game_div');
 
 var remotePlayers;
@@ -25,6 +25,7 @@ var main_state = {
     preload: function () {
         //game.load.image('background', 'assets/debug-grid-1920x1920.png');
         game.load.image('car', 'assets/car.png');
+        game.load.image('red', 'assets/red.png');
         game.load.tilemap('background_json', 'assets/tilemaps/background.json', null, Phaser.Tilemap.TILED_JSON);
         game.load.image('background_tiles', 'assets/tilemaps/background.png');
     },
@@ -69,14 +70,14 @@ var main_state = {
 };
 main_state.render = function () {
     //game.debug.bodyInfo(player, 16, 24);
-    game.debug.body(player);
-    player.forEachAlive(function(member) {    game.debug.body(member);}, this);
+    //game.debug.body(player);
+    /*player.forEachAlive(function(member) {    game.debug.body(member);}, this);
     remotePlayers.forEachAlive(function(member) {
         member.forEachAlive(function(member) {    game.debug.body(member);}, this);
-    }, this);
+    }, this);*/
 };
 main_state.update = function () {
-    //gui.updateSpeedValue(player._showable_speed);
+    gui.updateSpeedValue(player._showable_speed);
     //game.physics.arcade.collide(player.sprite, obstructors, this.carColissionHandler, null, this);
     remotePlayers.forEachAlive(function(member) {
         game.physics.arcade.collide(player.sprite, member.sprite, main_state.carColissionHandler, null, main_state);
@@ -85,9 +86,7 @@ main_state.update = function () {
 };
 main_state.carColissionHandler = function (car, other) {
     emitColission(car.x,car.y,car.parent.id,other.parent.id);
-    crashEmitter.showAtPosition(car.x,car.y);//is this necessary?
-    //explode car
-    //GUI.gameover();
+    crashEmitter.showAtPosition(car.x,car.y);
 };
 main_state.addRemotePlayer=function(game,data){
     var  remote = new PhaserCar(game, false);
@@ -196,20 +195,30 @@ PhaserCar = function (game,isPlayer) {
     this.enableBody=true;
     this.enableBodyDebug=true;
     this.sprite=game.add.sprite(40, 40, 'car');
-    this.add(this.sprite);
+
     //game.physics.enable(this, Phaser.Physics.ARCADE);
     // game.physics.enable(this.sprite, Phaser.Physics.ARCADE);
     this.sprite.anchor.setTo(0.5, 0.5);
     this.name=player_name;
 
-    this.sprite.body.offset.setTo(5, 20);
-    this.sprite.body.height = 20;
-    this.sprite.body.width = 20;
-    this.sprite.body.offset.setTo(5, 20);
-    this.sprite.body.height = 20;
-    this.sprite.body.width = 20;
+    this.emitter = game.add.emitter(game.world.centerX, 500, 400);
+    this.add(this.emitter);
+    this.add(this.sprite);
+    this.emitter.makeParticles('red');
+    this.emitter.setXSpeed(0, 0);
+    this.emitter.setYSpeed(0, 0);
+    this.emitter.setRotation(0, 0);
+    //this.emitter.setAlpha(0.1, 1, 100);
+    this.emitter.blendMode=1;
+    this.emitter.setScale(0.5, 0.1, 0.5, 0.1, 1000, Phaser.Easing.Quintic.Out);
+    this.emitter.gravity = 0;
+    this.emitter.start(false, 500, 20);
+    this.emitter.emitX = this.sprite.x;
+    this.emitter.emitY = this.sprite.y;
+    this.sprite.body.height = 50;
+    this.sprite.body.width = 50;
+    this.sprite.body.offset.setTo(5, 5);
     this._is_player=isPlayer;
-
     //if(isPlayer)game.add.existing(this);//if is player it gets added as its created
     this._max_speed = 500;
     this._speed_per_loop = 1;
@@ -221,6 +230,7 @@ PhaserCar = function (game,isPlayer) {
     this._player_name_text = game.add.text(0, 0, this.name, {font: "12px Arial", fill: "#fff"}, this);
     this._player_name_text.anchor.setTo(0.5, 0.5);
     this._player_name_text.fixedToCamera = false;
+
     this.setName = function (val) {
         this.name=val;
         this._player_name_text.setText("" + val + "");
@@ -231,6 +241,7 @@ PhaserCar = function (game,isPlayer) {
     this.getSpeed = function(){
     return this._speed;
     };
+    console.log(this);
 };
 
 PhaserCar.prototype = Object.create(Phaser.Group.prototype);
@@ -238,10 +249,22 @@ PhaserCar.prototype.constructor = PhaserCar;
 PhaserCar.prototype.update = function () {
     var _desacceletarion = 5;//NAME?
     var IMG_OFFSET_ANLGE_FIX = 1.6;
+    this.emitter.emitX = this.sprite.x;
+    this.emitter.emitY = this.sprite.y;
+
+    //FLAGEAR ESTO -> if speed gretaer flag=true ,dont call every time
+    if(this._showable_speed > 220){
+        this.emitter.setScale(0.8, 0.4, 0.8, 0.4, 0, Phaser.Easing.Quintic.Out);
+    }else if(this._showable_speed > 120){
+        this.emitter.setScale(0.8, 0.2, 0.8, 0.2, 1000, Phaser.Easing.Quintic.Out);
+    }else{
+        this.emitter.setScale(0.5, 0.1, 0.5, 0.1, 1000, Phaser.Easing.Quintic.Out);
+    }
+    //FLAGEAR ESTO <-
 
     //player name follow player
     this._player_name_text.x=this.sprite.x;
-    this._player_name_text.y=this.sprite.y-35;
+    this._player_name_text.y=this.sprite.y;
     //  only move when clicking
     if(!this._is_player)return;
 
